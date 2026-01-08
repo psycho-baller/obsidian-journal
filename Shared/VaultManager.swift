@@ -1,10 +1,11 @@
 import Foundation
 import SwiftUI
+import os
 
 class VaultManager: ObservableObject {
     // TODO: explicit suiteName is required for Share Extension to see this.
     // User must replace "group.com.example.obsidianjournal" with their actual App Group ID.
-    private let defaults = UserDefaults(suiteName: "group.com.example.obsidianjournal")
+    private let defaults = UserDefaults(suiteName: "group.studio.orbitlabs.obsidianjournal")
 
     @Published var vaultURL: URL?
     @Published var isVaultConfigured: Bool = false
@@ -15,31 +16,48 @@ class VaultManager: ObservableObject {
     }
 
     func restoreAccess() {
-        guard let bookmark = defaults?.data(forKey: "vaultBookmark") else { return }
+        guard let bookmark = defaults?.data(forKey: "vaultBookmark") else {
+            Logger.vault.debug("No vault bookmark found in defaults.")
+            return
+        }
 
         var isStale = false
         do {
+            #if os(macOS)
             let url = try URL(resolvingBookmarkData: bookmark,
-                            options: .withSecurityScope,
-                            relativeTo: nil,
-                            bookmarkDataIsStale: &isStale)
+                              options: .withSecurityScope,
+                              relativeTo: nil,
+                              bookmarkDataIsStale: &isStale)
+            #else
+            let url = try URL(resolvingBookmarkData: bookmark,
+                              options: [],
+                              relativeTo: nil,
+                              bookmarkDataIsStale: &isStale)
+            #endif
 
             if isStale {
-                // Determine what to do if stale (request again), for now just try to use it
-                print("Bookmark is stale")
+                Logger.vault.warning("Bookmark is stale")
             }
 
+            #if os(macOS)
             if url.startAccessingSecurityScopedResource() {
                 self.vaultURL = url
                 self.isVaultConfigured = true
-                print("Successfully restored access to: \(url.path)")
+                Logger.vault.info("Successfully restored access to: \(url.path)")
             } else {
                 self.error = "Could not access the folder. Please select it again."
                 self.defaults?.removeObject(forKey: "vaultBookmark")
                 self.isVaultConfigured = false
+                Logger.vault.error("Failed to access security scoped resource.")
             }
+            #else
+            // iOS: security-scoped bookmarks options are unavailable; use URL directly
+            self.vaultURL = url
+            self.isVaultConfigured = true
+            Logger.vault.info("Successfully restored access to: \(url.path)")
+            #endif
         } catch {
-            print("Error parsing bookmark: \(error)")
+            Logger.vault.error("Error parsing bookmark: \(error.localizedDescription)")
             self.error = "Error restoring access: \(error.localizedDescription)"
             self.defaults?.removeObject(forKey: "vaultBookmark")
             self.isVaultConfigured = false
@@ -48,7 +66,8 @@ class VaultManager: ObservableObject {
 
     func setVaultFolder(_ url: URL) {
         do {
-            // Need to start accessing to create valid bookmark
+            #if os(macOS)
+            // Need to start accessing to create valid security-scoped bookmark on macOS
             guard url.startAccessingSecurityScopedResource() else {
                 self.error = "Failed to access selected folder"
                 return
@@ -56,8 +75,14 @@ class VaultManager: ObservableObject {
             defer { url.stopAccessingSecurityScopedResource() }
 
             let bookmark = try url.bookmarkData(options: .securityScopeAllowOnlyReadAccess,
-                                              includingResourceValuesForKeys: nil,
-                                              relativeTo: nil)
+                                                includingResourceValuesForKeys: nil,
+                                                relativeTo: nil)
+            #else
+            // iOS: security-scoped bookmark options are unavailable; create a standard bookmark
+            let bookmark = try url.bookmarkData(options: [],
+                                                includingResourceValuesForKeys: nil,
+                                                relativeTo: nil)
+            #endif
 
             self.defaults?.set(bookmark, forKey: "vaultBookmark")
 
@@ -82,20 +107,14 @@ class VaultManager: ObservableObject {
             throw VaultError.notConfigured
         }
 
-        // Ensure we are accessing
-        // Note: For long running apps, we might keep it open, but safe pattern is to ensure it is open
-        // `startAccessingSecurityScopedResource` calls are reference counted according to Apple docs,
-        // so calling it again is safe as long as we balance with stop.
-        // However, we already called it in restoreAccess() and kept it open.
-        // Apple recommends stopping when not in use, but for a "companion" app constantly writing, keeping it open while app is active is common.
-        // To be safe against suspension, we can re-assert:
-
+        #if os(macOS)
         let accessing = url.startAccessingSecurityScopedResource()
         defer {
             if accessing {
                 url.stopAccessingSecurityScopedResource()
             }
         }
+        #endif
 
         return try block(url)
     }

@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import os
 
 class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     @Published var isRecording = false
@@ -14,6 +15,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     }
 
     func startRecording() {
+        Logger.audio.info("Initiating recording flow...")
         let recordingSession = AVAudioSession.sharedInstance()
 
         do {
@@ -22,6 +24,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
 
             let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             let audioFilename = docDir.appendingPathComponent("recording.m4a")
+            Logger.audio.debug("Recording path: \(audioFilename.path)")
 
             let settings = [
                 AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
@@ -39,17 +42,20 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
             recordingURL = nil
 
             startMonitoring()
+            Logger.audio.notice("Recording started.")
 
         } catch {
-            print("Failed to start recording: \(error)")
+            Logger.audio.error("Failed to start recording: \(error.localizedDescription)")
         }
     }
 
     func stopRecording() {
+        Logger.audio.info("Stopping recording...")
         audioRecorder?.stop()
         isRecording = false
         stopMonitoring()
         recordingURL = audioRecorder?.url
+        Logger.audio.notice("Recording stopped. File saved.")
     }
 
     private func startMonitoring() {
@@ -68,8 +74,10 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
         if !flag {
             // Handle error
-            print("Recording failed")
+            Logger.audio.error("Audio Recorder finish flag is false.")
             recordingURL = nil
+        } else {
+            Logger.audio.info("Audio Recorder finished successfully.")
         }
     }
 }

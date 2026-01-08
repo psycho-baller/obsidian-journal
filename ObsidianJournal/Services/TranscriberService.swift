@@ -1,10 +1,6 @@
 import Foundation
-
-// NOTE: To enable real transcription, you must add 'WhisperKit' via Swift Package Manager.
-// URL: https://github.com/argmaxinc/WhisperKit
-// Then uncomment the import and implementation below.
-
-// import WhisperKit
+import os
+import WhisperKit
 
 protocol TranscriberServiceProtocol {
     func transcribe(audioURL: URL) async throws -> String
@@ -12,51 +8,91 @@ protocol TranscriberServiceProtocol {
 
 class TranscriberService: ObservableObject, TranscriberServiceProtocol {
     @Published var isTranscribing = false
-
-    // Placeholder implementation until WhisperKit is added
-    func transcribe(audioURL: URL) async throws -> String {
-        DispatchQueue.main.async { self.isTranscribing = true }
-
-        // Simulate processing time
-        try await Task.sleep(nanoseconds: 2 * 1_000_000_000)
-
-        DispatchQueue.main.async { self.isTranscribing = false }
-
-        return "This is a simulated transcription. Voice journaling allows you to capture thoughts freely without the friction of typing."
-    }
-
-    /*
-    // Real Implementation (Uncomment after adding WhisperKit)
+    @Published var modelLoadingState: ModelLoadingState = .notLoaded
+    @Published var progress: Double = 0.0
 
     private var whisperPipe: WhisperKit?
+    private let modelName = "base.en" // "base.en" (optimized) or "small.en" depending on device
+
+    enum ModelLoadingState: Equatable {
+        case notLoaded
+        case loading
+        case loaded
+        case error(String)
+    }
 
     init() {
         Task {
-            do {
-                // Initialize WhisperKit with default model
-                self.whisperPipe = try await WhisperKit(computedPath: "base.en")
-                print("WhisperKit initialized")
-            } catch {
-                print("Failed to init WhisperKit: \(error)")
-            }
+            await loadModel()
+        }
+    }
+
+    @MainActor
+    func loadModel() async {
+        guard modelLoadingState != .loading && modelLoadingState != .loaded else { return }
+
+        modelLoadingState = .loading
+        Logger.transcription.info("Initializing WhisperKit with model: \(self.modelName)")
+
+        do {
+            // WhisperKit will automatically download (if needed) and load the model
+            // optimizing for the Neural Engine where possible.
+            whisperPipe = try await WhisperKit(computedPath: modelName)
+            modelLoadingState = .loaded
+            Logger.transcription.notice("WhisperKit initialized successfully.")
+        } catch {
+            Logger.transcription.error("Failed to load WhisperKit: \(error.localizedDescription)")
+            modelLoadingState = .error(error.localizedDescription)
         }
     }
 
     func transcribe(audioURL: URL) async throws -> String {
-        guard let whisper = whisperPipe else {
-            throw TranscriberError.notInitialized
+        guard let pipe = whisperPipe else {
+            if modelLoadingState == .notLoaded || modelLoadingState == .loading.self {
+                 Logger.transcription.warning("Transcription requested but model not ready. Waiting...")
+                 await loadModel()
+                 // Check again
+                 guard let pipe = whisperPipe else {
+                     throw TranscriberError.modelNotInitialized
+                 }
+                 return try await performTranscription(pipe: pipe, url: audioURL)
+            }
+            throw TranscriberError.modelNotInitialized
         }
 
-        DispatchQueue.main.async { self.isTranscribing = true }
-        defer { DispatchQueue.main.async { self.isTranscribing = false } }
-
-        let results = try await whisper.transcribe(audioPath: audioURL.path)
-        let text = results.map { $0.text }.joined(separator: " ")
-        return text
+        return try await performTranscription(pipe: pipe, url: audioURL)
     }
-    */
+
+    private func performTranscription(pipe: WhisperKit, url: URL) async throws -> String {
+        Logger.transcription.info("Starting transcription for file: \(url.lastPathComponent)")
+
+        await MainActor.run { self.isTranscribing = true }
+        defer { Task { @MainActor in self.isTranscribing = false } }
+
+        do {
+            // Transcribe
+            let results = try await pipe.transcribe(audioPath: url.path)
+
+            // Combine segments
+            let fullText = results.map { $0.text }.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+
+            Logger.transcription.notice("Transcription completed. Length: \(fullText.count)")
+            return fullText
+
+        } catch {
+            Logger.transcription.error("Transcription failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
 }
 
-enum TranscriberError: Error {
-    case notInitialized
+enum TranscriberError: Error, LocalizedError {
+    case modelNotInitialized
+
+    var errorDescription: String? {
+        switch self {
+        case .modelNotInitialized:
+            return "Whisper model is not initialized."
+        }
+    }
 }
