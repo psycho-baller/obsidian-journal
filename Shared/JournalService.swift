@@ -1,20 +1,6 @@
 import Foundation
 import os
 
-public struct AIResponse: Codable {
-    public let summary: String
-    public let insights: [String]
-    public let actionItems: [String]
-    public let tags: [String]
-
-    enum CodingKeys: String, CodingKey {
-        case summary
-        case insights
-        case actionItems = "action_items"
-        case tags
-    }
-}
-
 class JournalService: ObservableObject {
     private let vaultManager: VaultManager
 
@@ -22,19 +8,145 @@ class JournalService: ObservableObject {
         self.vaultManager = vaultManager
     }
 
-    // MARK: - Core Logic
+    // MARK: - Template Population Support
+
+    /// Reads the existing daily note for a given date, or returns nil if it doesn't exist.
+    func readDailyNote(for date: Date) throws -> String? {
+        var result: String? = nil
+        try vaultManager.performInVault { vaultURL in
+            let fileName = Self.dateFormatter.string(from: date) + ".md"
+            let noteURL = vaultURL.appendingPathComponent(fileName)
+
+            if FileManager.default.fileExists(atPath: noteURL.path) {
+                result = try String(contentsOf: noteURL, encoding: .utf8)
+                Logger.journal.debug("Read existing daily note: \(fileName)")
+            }
+        }
+        return result
+    }
+
+    /// Returns a default template for new daily notes.
+    func getDefaultTemplate(for date: Date) -> String {
+        let dateString = Self.dateFormatter.string(from: date)
+        return """
+        # Daily Note: \(dateString)
+
+        ## Metrics
+        - Mood:
+        - Energy:
+        - Sleep Hours:
+
+        ## Morning Intentions
+
+        ## Things I Learned
+
+        ## Gratitude
+
+        ## Tasks Completed
+
+        ## Reflections
+
+        """
+    }
+
+    /// Applies AI-generated template updates to a note and saves it.
+    /// This method should be called AFTER getting the updates from LLMService.
+    func applyTemplateUpdates(_ updates: [TemplateUpdate], to existingNote: String, for date: Date) throws {
+        Logger.journal.info("Applying \(updates.count) template updates...")
+
+        var result = existingNote
+
+        for update in updates {
+            guard let value = update.value, !value.isEmpty else { continue }
+
+            switch update.updateType {
+            case .metric:
+                result = applyMetricUpdate(to: result, field: update.field, value: value)
+
+            case .append:
+                result = applyAppendUpdate(to: result, field: update.field, value: value)
+
+            case .replace:
+                result = applyReplaceUpdate(to: result, field: update.field, value: value)
+            }
+        }
+
+        try saveDailyNote(content: result, for: date)
+        Logger.journal.notice("Template updates applied and saved.")
+    }
+
+    private func applyMetricUpdate(to note: String, field: String, value: String) -> String {
+        var lines = note.components(separatedBy: "\n")
+        let normalizedField = field.trimmingCharacters(in: CharacterSet(charactersIn: "#- "))
+
+        for (index, line) in lines.enumerated() {
+            if line.contains("\(normalizedField):") {
+                if let colonRange = line.range(of: ":") {
+                    let beforeColon = String(line[..<colonRange.upperBound])
+                    let afterColon = String(line[colonRange.upperBound...]).trimmingCharacters(in: .whitespaces)
+
+                    if afterColon.isEmpty {
+                        lines[index] = beforeColon + " " + value
+                        Logger.journal.debug("Updated metric '\(field)' to '\(value)'")
+                    }
+                }
+                break
+            }
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private func applyAppendUpdate(to note: String, field: String, value: String) -> String {
+        var lines = note.components(separatedBy: "\n")
+
+        for (index, line) in lines.enumerated() {
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+
+            if trimmedLine == field || trimmedLine.hasPrefix(field) {
+                var insertIndex = index + 1
+
+                while insertIndex < lines.count {
+                    let nextLine = lines[insertIndex].trimmingCharacters(in: .whitespaces)
+                    if nextLine.hasPrefix("#") {
+                        break
+                    }
+                    insertIndex += 1
+                }
+
+                let contentToInsert = value.hasPrefix("-") ? value : "- " + value
+                lines.insert(contentToInsert, at: insertIndex)
+
+                Logger.journal.debug("Appended to section '\(field)'")
+                break
+            }
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private func applyReplaceUpdate(to note: String, field: String, value: String) -> String {
+        Logger.journal.debug("Replace update for '\(field)' - using append behavior for safety")
+        return applyAppendUpdate(to: note, field: field, value: value)
+    }
+
+    private func saveDailyNote(content: String, for date: Date) throws {
+        try vaultManager.performInVault { vaultURL in
+            let fileName = Self.dateFormatter.string(from: date) + ".md"
+            let noteURL = vaultURL.appendingPathComponent(fileName)
+            try content.write(to: noteURL, atomically: true, encoding: .utf8)
+            Logger.journal.info("Saved daily note: \(fileName)")
+        }
+    }
+
+    // MARK: - Legacy Methods (Backward Compatibility)
 
     func saveEntry(text: String, date: Date = Date()) async throws {
         Logger.journal.info("Starting saveEntry process...")
         try vaultManager.performInVault { vaultURL in
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            let fileName = dateFormatter.string(from: date) + ".md"
-
+            let fileName = Self.dateFormatter.string(from: date) + ".md"
             let dailyNoteURL = vaultURL.appendingPathComponent(fileName)
-            Logger.journal.debug("Target file: \(dailyNoteURL.path)")
 
-            // formatting
             let timestamp = DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short)
             let newContent = """
 
@@ -44,8 +156,6 @@ class JournalService: ObservableObject {
             """
 
             if FileManager.default.fileExists(atPath: dailyNoteURL.path) {
-                // Append
-                Logger.journal.info("Appending to existing note.")
                 let fileHandle = try FileHandle(forWritingTo: dailyNoteURL)
                 fileHandle.seekToEndOfFile()
                 if let data = newContent.data(using: .utf8) {
@@ -53,10 +163,8 @@ class JournalService: ObservableObject {
                 }
                 fileHandle.closeFile()
             } else {
-                // Create New
-                Logger.journal.info("Creating new daily note.")
                 let initialContent = """
-                # Daily Note: \(dateFormatter.string(from: date))
+                # Daily Note: \(Self.dateFormatter.string(from: date))
 
                 \(newContent)
                 """
@@ -66,20 +174,15 @@ class JournalService: ObservableObject {
         }
     }
 
-    // MARK: - AI Integration
     func saveAIEntry(originalText: String, aiResponse: AIResponse, date: Date = Date()) async throws {
         Logger.journal.info("Starting saveAIEntry process...")
         try vaultManager.performInVault { vaultURL in
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            let fileName = dateFormatter.string(from: date) + ".md"
+            let fileName = Self.dateFormatter.string(from: date) + ".md"
             let dailyNoteURL = vaultURL.appendingPathComponent(fileName)
-            Logger.journal.debug("Target AI file: \(dailyNoteURL.path)")
 
             let timestamp = DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short)
 
-            // Format MD
-            var mdContent = """
+            let mdContent = """
 
             ## \(timestamp) Voice Journal
             > \(originalText)
@@ -98,7 +201,6 @@ class JournalService: ObservableObject {
             """
 
             if FileManager.default.fileExists(atPath: dailyNoteURL.path) {
-                Logger.journal.info("Appending AI entry to existing note.")
                 let fileHandle = try FileHandle(forWritingTo: dailyNoteURL)
                 fileHandle.seekToEndOfFile()
                 if let data = mdContent.data(using: .utf8) {
@@ -106,9 +208,8 @@ class JournalService: ObservableObject {
                 }
                 fileHandle.closeFile()
             } else {
-                Logger.journal.info("Creating new daily note for AI entry.")
                 let initialContent = """
-                # Daily Note: \(dateFormatter.string(from: date))
+                # Daily Note: \(Self.dateFormatter.string(from: date))
                 \(mdContent)
                 """
                 try initialContent.write(to: dailyNoteURL, atomically: true, encoding: .utf8)
@@ -116,4 +217,12 @@ class JournalService: ObservableObject {
             Logger.journal.notice("AI Entry saved successfully.")
         }
     }
+
+    // MARK: - Helpers
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }

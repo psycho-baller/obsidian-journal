@@ -70,7 +70,7 @@ class ShareViewController: SLComposeServiceViewController {
                     return
                 }
 
-                // 3. Pass to AI (Path 1 & 2 converge here)
+                // 3. Pass to AI
                 let aiResponse = try await llmService.processJournalEntry(text: finalInputText)
 
                 // 4. Save to Journal

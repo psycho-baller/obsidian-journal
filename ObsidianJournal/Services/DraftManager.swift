@@ -19,6 +19,7 @@ class DraftManager: ObservableObject {
 
     init() {
         loadDrafts()
+        cleanupOnLaunch()
 
         // Ensure there is at least one draft (the current active one) or create a new one
         if let lastEdited = activeDrafts.sorted(by: { $0.modifiedAt > $1.modifiedAt }).first {
@@ -30,7 +31,27 @@ class DraftManager: ObservableObject {
         Logger.ui.debug("DraftManager initialized. Total count: \(self.drafts.count). Active: \(self.activeDrafts.count)")
     }
 
+    private func cleanupOnLaunch() {
+        // Remove empty drafts on launch, except if it's the only one?
+        // Actually, just remove all empty ones. The init logic below will create one if needed.
+        let originalCount = drafts.count
+        drafts.removeAll { $0.status == .draft && $0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        if drafts.count != originalCount {
+            saveDrafts()
+            Logger.ui.info("Cleaned up \(originalCount - self.drafts.count) empty drafts on launch.")
+        }
+    }
+
     func createNewDraft() {
+        // Reuse current if empty
+        if let current = currentDraft, current.status == .draft, current.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Logger.ui.info("Reusing current empty draft: \(current.id)")
+            return
+        }
+
+        // Also cleanup any other stray empty drafts before adding a new one
+        cleanupEmptyDrafts()
+
         let newDraft = Draft()
         drafts.append(newDraft)
         currentDraft = newDraft
@@ -75,6 +96,10 @@ class DraftManager: ObservableObject {
     }
 
     func restoreDraft(_ draft: Draft) {
+        // When restoring, we might be navigating to it.
+        // We should check if the CURRENT (pre-restore) draft is empty and should be cleaned up.
+        cleanupEmptyDrafts()
+
         guard let index = drafts.firstIndex(where: { $0.id == draft.id }) else { return }
 
         var restoredDraft = drafts[index]
@@ -101,8 +126,30 @@ class DraftManager: ObservableObject {
     }
 
     func selectDraft(_ draft: Draft) {
+        // Before switching, check if the *current* draft is empty and should be discarded
+        if let oldDraft = currentDraft, oldDraft.id != draft.id, oldDraft.status == .draft {
+            if oldDraft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                // Delete the old empty draft
+                Logger.ui.info("Auto-deleting empty draft: \(oldDraft.id)")
+                drafts.removeAll { $0.id == oldDraft.id }
+            }
+        }
+
         self.currentDraft = draft
+        saveDrafts()
         Logger.ui.debug("Selected draft: \(draft.id)")
+    }
+
+    private func cleanupEmptyDrafts() {
+        // Removes empty drafts that are NOT the current one (safety)
+        // Or actually, remove ANY empty draft that isn't the one we are about to switch TO.
+        // But for generic cleanup:
+        let emptyDrafts = drafts.filter { $0.status == .draft && $0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.id != currentDraft?.id }
+
+        for draft in emptyDrafts {
+             drafts.removeAll { $0.id == draft.id }
+             Logger.ui.info("Cleaned up background empty draft: \(draft.id)")
+        }
     }
 
     // MARK: - Persistence

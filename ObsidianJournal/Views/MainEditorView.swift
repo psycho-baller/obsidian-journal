@@ -204,21 +204,33 @@ struct MainEditorView: View {
 
         Task {
             do {
-                // 1. Process with AI
-                let llmService = LLMService() // Or inject
-                let aiResponse = try await llmService.processJournalEntry(text: draft.content)
+                let llmService = LLMService()
+                let date = draft.createdAt
 
-                // 2. Save using JournalService
-                try await journalService.saveAIEntry(originalText: draft.content, aiResponse: aiResponse, date: draft.createdAt)
+                // Step 1: Read existing daily note or get default template
+                let existingNote = try journalService.readDailyNote(for: date) ?? journalService.getDefaultTemplate(for: date)
 
-                // 3. Move to Archive (Update Status)
+                // Step 2: Call AI to extract structured updates from transcript
+                let populationResponse = try await llmService.populateTemplate(
+                    transcript: draft.content,
+                    existingNote: existingNote,
+                    date: date
+                )
+
+                // Step 3: Apply updates to the note
+                try journalService.applyTemplateUpdates(
+                    populationResponse.updates,
+                    to: existingNote,
+                    for: date
+                )
+
+                // Step 4: Archive the draft
                 await MainActor.run {
                     draftManager.archiveDraft(draft)
-                    // Feedback? Animation?
                 }
             } catch {
                 print("Submission failed: \(error)")
-                // Show error alert
+                // TODO: Show error alert
             }
         }
     }
