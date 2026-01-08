@@ -74,7 +74,7 @@ class ShareViewController: SLComposeServiceViewController {
                 let aiResponse = try await llmService.processJournalEntry(text: finalInputText)
 
                 // 4. Save to Journal
-                try await journalService.saveAIEntry(originalText: finalInputText, aiResponse: aiResponse)
+                try await journalService.saveAIEntry(originalText: finalInputText, aiResponse: aiResponse, date: Date().journalDate)
 
                 // Done
                 self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)

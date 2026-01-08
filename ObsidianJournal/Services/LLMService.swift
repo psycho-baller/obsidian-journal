@@ -135,6 +135,127 @@ class LLMService: ObservableObject {
         return try await executeRequest(requestBody: requestBody, responseType: TemplatePopulationResponse.self)
     }
 
+    // MARK: - Template Inference
+
+    /// Analyzes sample daily notes and infers the template structure with date-based variables
+    /// - Parameter samples: Array of DailyNoteSample from recent daily notes (ideally 3-5 days)
+    /// - Returns: InferredTemplate with detected placeholders
+    func inferTemplate(from samples: [DailyNoteSample]) async throws -> InferredTemplate {
+        Logger.ai.info("Starting template inference from \(samples.count) sample notes")
+
+        guard !samples.isEmpty else {
+            Logger.ai.warning("No samples provided, returning default template")
+            return InferredTemplate(
+                template: "# {{date:yyyy-MM-dd}}\n\n## Journal\n\n",
+                variables: [TemplateVariable(name: "date", format: "yyyy-MM-dd", description: "Current date")],
+                confidence: 0.5,
+                notes: "Default template - no samples available"
+            )
+        }
+
+        guard let apiKey = KeychainManager.shared.getAPIKey(), !apiKey.isEmpty else {
+            throw LLMError.missingAPIKey
+        }
+
+        // Build the sample notes string with date context
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        let weekdayFormatter = DateFormatter()
+        weekdayFormatter.dateFormat = "EEEE"
+
+        var samplesText = ""
+        for sample in samples {
+            let dateStr = dateFormatter.string(from: sample.date)
+            let weekdayStr = weekdayFormatter.string(from: sample.date)
+            let calendar = Calendar.current
+            let weekOfYear = calendar.component(.weekOfYear, from: sample.date)
+
+            samplesText += """
+            === \(dateStr) (\(weekdayStr), Week \(weekOfYear)) ===
+            \(sample.content)
+
+            """
+        }
+
+        let systemPrompt = """
+        You are a template pattern recognition agent. Your task is to analyze multiple daily notes from an Obsidian vault and infer the underlying template structure.
+
+        ## Your Mission
+        1. Identify what content stays CONSTANT across all notes (the template structure)
+        2. Identify what content CHANGES based on the date (variables that need placeholders)
+        3. Output a reusable template with {{variable:format}} placeholders
+
+        ## Supported Variables
+        You can use these placeholder patterns:
+        - {{date:FORMAT}} - The current date, e.g., {{date:yyyy-MM-dd}} → 2026-01-08
+        - {{weekday}} - Full weekday name, e.g., Wednesday
+        - {{weekday_short}} - Short weekday, e.g., Wed
+        - {{yesterday:FORMAT}} - Yesterday's date
+        - {{tomorrow:FORMAT}} - Tomorrow's date
+        - {{week_number}} - ISO week number, e.g., 2
+        - {{year}} - 4-digit year, e.g., 2026
+        - {{month}} - Full month name, e.g., January
+        - {{month_short}} - Short month, e.g., Jan
+        - {{day}} - Day of month number, e.g., 8
+
+        ## Output Schema (JSON)
+        ```json
+        {
+          "template": "The full template string with {{variable}} placeholders",
+          "variables": [
+            {
+              "name": "variable_name",
+              "format": "format_string or null",
+              "description": "What this variable represents"
+            }
+          ],
+          "confidence": 0.0-1.0,
+          "notes": "Explanation of patterns detected"
+        }
+        ```
+
+        ## Rules
+        1. Look for date patterns in titles, headers, and navigation links (like [[2026-01-07]] ← [[2026-01-09]])
+        2. Preserve the exact markdown structure - headers, bullet points, spacing
+        3. Keep any static text that appears identically in all samples
+        4. Remove user-entered content (journal entries, completed tasks) - leave sections empty
+        5. If you see patterns like "Week 1" or "Week 52", use {{week_number}}
+        6. For navigation links, use {{yesterday:format}} and {{tomorrow:format}}
+        7. Set confidence based on how consistent the patterns are across samples
+
+        ## Example Detection
+        If you see across 3 notes:
+        - "# 2026-01-05 | Friday"
+        - "# 2026-01-06 | Saturday"
+        - "# 2026-01-07 | Sunday"
+
+        The template should be: "# {{date:yyyy-MM-dd}} | {{weekday}}"
+        """
+
+        let userPrompt = """
+        Analyze these \(samples.count) daily notes and infer the template structure:
+
+        \(samplesText)
+
+        Output the inferred template as valid JSON.
+        """
+
+        let requestBody: [String: Any] = [
+            "model": "gpt-4o-mini",
+            "messages": [
+                ["role": "system", "content": systemPrompt],
+                ["role": "user", "content": userPrompt]
+            ],
+            "response_format": ["type": "json_object"],
+            "temperature": 0.1 // Very low temperature for consistent pattern matching
+        ]
+
+        let response = try await executeRequest(requestBody: requestBody, responseType: InferredTemplate.self)
+        Logger.ai.notice("Template inference complete. Confidence: \(response.confidence)")
+        return response
+    }
+
     // MARK: - Legacy Method (Simple Insight Extraction)
 
     /// Original method for backward compatibility - extracts insights without template context.

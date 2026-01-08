@@ -139,6 +139,44 @@ class JournalService: ObservableObject {
         }
     }
 
+    // MARK: - Template-Based Note Creation
+
+    /// Creates a new daily note using an inferred template
+    /// - Parameters:
+    ///   - date: The date for the new note
+    ///   - template: The InferredTemplate to use (from VaultManager.inferredTemplate)
+    /// - Throws: VaultError if vault is not configured
+    func createDailyNote(for date: Date, using template: InferredTemplate) throws {
+        let renderedContent = TemplateEngine.render(template, for: date)
+        try saveDailyNote(content: renderedContent, for: date)
+        Logger.journal.notice("Created new daily note from inferred template for \(Self.dateFormatter.string(from: date))")
+    }
+
+    /// Gets or creates the daily note for a given date
+    /// - Parameters:
+    ///   - date: The date for the note
+    ///   - template: Optional inferred template. If nil and note doesn't exist, uses default template.
+    /// - Returns: The content of the daily note
+    func getOrCreateDailyNote(for date: Date, template: InferredTemplate?) throws -> String {
+        // Check if note already exists
+        if let existingNote = try readDailyNote(for: date) {
+            return existingNote
+        }
+
+        // Note doesn't exist - create it
+        let content: String
+        if let inferredTemplate = template {
+            content = TemplateEngine.render(inferredTemplate, for: date)
+            Logger.journal.info("Creating new note from inferred template")
+        } else {
+            content = getDefaultTemplate(for: date)
+            Logger.journal.info("Creating new note from default template")
+        }
+
+        try saveDailyNote(content: content, for: date)
+        return content
+    }
+
     // MARK: - Legacy Methods (Backward Compatibility)
 
     func saveEntry(text: String, date: Date = Date()) async throws {

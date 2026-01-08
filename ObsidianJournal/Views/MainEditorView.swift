@@ -205,7 +205,7 @@ struct MainEditorView: View {
         Task {
             do {
                 let llmService = LLMService()
-                let date = draft.createdAt
+                let date = draft.createdAt.journalDate
 
                 // Step 1: Read existing daily note or get default template
                 let existingNote = try journalService.readDailyNote(for: date) ?? journalService.getDefaultTemplate(for: date)

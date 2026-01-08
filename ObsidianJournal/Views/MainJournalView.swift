@@ -118,6 +118,7 @@ struct MainJournalView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
+                    .environmentObject(vaultManager)
             }
             .fileImporter(
                 isPresented: $fileImportManager.isImporterPresented,
