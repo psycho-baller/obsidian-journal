@@ -24,25 +24,23 @@ struct CursorAwareTextEditor: UIViewRepresentable {
     func updateUIView(_ uiView: UITextView, context: Context) {
         uiView.isEditable = isEditable
 
-        // 1. Update text if strictly different
-        if uiView.text != text {
+        // Only update text if it's actually different AND not from user typing
+        // This handles external updates (like transcription results)
+        let isExternalUpdate = uiView.text != text && !context.coordinator.isUserTyping
+
+        if isExternalUpdate {
+
             uiView.text = text
-        }
 
-        // 2. Update cursor position if different
-        // Calculate current usage of cursor
-        if let selectedRange = uiView.selectedTextRange {
-            let currentCursor = uiView.offset(from: uiView.beginningOfDocument, to: selectedRange.start)
-
-            if currentCursor != cursorPosition {
-                // Determine safe index
-                let safeIndex = min(max(0, cursorPosition), uiView.text.count)
-
-                if let newPosition = uiView.position(from: uiView.beginningOfDocument, offset: safeIndex) {
-                    uiView.selectedTextRange = uiView.textRange(from: newPosition, to: newPosition)
-                }
+            // Restore cursor position after external text update
+            let safePosition = min(max(0, cursorPosition), text.count)
+            if let newPosition = uiView.position(from: uiView.beginningOfDocument, offset: safePosition) {
+                uiView.selectedTextRange = uiView.textRange(from: newPosition, to: newPosition)
             }
         }
+
+        // Reset typing flag after view update completes
+        context.coordinator.isUserTyping = false
     }
 
     func makeCoordinator() -> Coordinator {
@@ -51,12 +49,16 @@ struct CursorAwareTextEditor: UIViewRepresentable {
 
     class Coordinator: NSObject, UITextViewDelegate {
         var parent: CursorAwareTextEditor
+        var isUserTyping = false
 
         init(_ parent: CursorAwareTextEditor) {
             self.parent = parent
         }
 
         func textViewDidChange(_ textView: UITextView) {
+            // Mark that this change came from user typing
+            isUserTyping = true
+
             // Update bindings
             parent.text = textView.text
             if let range = textView.selectedTextRange {

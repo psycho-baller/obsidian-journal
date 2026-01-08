@@ -59,10 +59,15 @@ class DraftManager: ObservableObject {
         Logger.ui.info("Created new draft: \(newDraft.id)")
     }
 
+    private var saveDebounceTask: Task<Void, Never>?
+
     func updateCurrentDraft(content: String) {
         guard var draft = currentDraft else { return }
         draft.content = content
         draft.modifiedAt = Date()
+
+        // Trigger UI update FIRST (before any disk I/O)
+        objectWillChange.send()
 
         // Update local state
         currentDraft = draft
@@ -74,7 +79,15 @@ class DraftManager: ObservableObject {
             drafts.append(draft)
         }
 
-        saveDrafts()
+        // Debounce disk save - only save after 1 second of inactivity
+        saveDebounceTask?.cancel()
+        saveDebounceTask = Task {
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                self.saveDrafts()
+            }
+        }
     }
 
     func archiveDraft(_ draft: Draft) {

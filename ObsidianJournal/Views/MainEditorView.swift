@@ -153,6 +153,12 @@ struct MainEditorView: View {
                 processTranscription(url: url)
             }
         }
+        .onAppear {
+            // Set cursor to end of existing draft so transcriptions append by default
+            if let draft = draftManager.currentDraft {
+                cursorPosition = draft.content.count
+            }
+        }
     }
 
     // MARK: - Actions
