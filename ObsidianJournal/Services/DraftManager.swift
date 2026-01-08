@@ -74,6 +74,18 @@ class DraftManager: ObservableObject {
         Logger.ui.info("Archived draft: \(draft.id)")
     }
 
+    func restoreDraft(_ draft: Draft) {
+        guard let index = drafts.firstIndex(where: { $0.id == draft.id }) else { return }
+
+        var restoredDraft = drafts[index]
+        restoredDraft.status = .draft
+        restoredDraft.modifiedAt = Date()
+
+        drafts[index] = restoredDraft
+        saveDrafts()
+        Logger.ui.info("Restored draft: \(draft.id)")
+    }
+
     func deleteDraft(_ draft: Draft) {
         drafts.removeAll { $0.id == draft.id }
         // If we deleted the current draft, check if we have any other active drafts

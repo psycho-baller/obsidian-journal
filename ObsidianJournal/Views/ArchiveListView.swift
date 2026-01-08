@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ArchiveListView: View {
-    @ObservedObject var draftManager: DraftManager // Now uses DraftManager source of truth
+    @ObservedObject var draftManager: DraftManager
     @Binding var isPresented: Bool
 
     var body: some View {
@@ -17,11 +17,54 @@ struct ArchiveListView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+                    .contentShape(Rectangle()) // Make entire row tappable
+                    .onTapGesture {
+                        // 1. Restore & Edit
+                        restoreAndOpen(draft)
+                    }
+                    .contextMenu {
+                        // 2. Hold to Preview (Context Menu default behavior is preview-like)
+                        Button {
+                            restoreAndOpen(draft)
+                        } label: {
+                            Label("Restore & Edit", systemImage: "pencil")
+                        }
+
+                        // Valid context menu usually shows content automatically if using standard List
+                        // We can add a "Copy" text option too
+                        Button {
+                            UIPasteboard.general.string = draft.content
+                        } label: {
+                            Label("Copy Text", systemImage: "doc.on.doc")
+                        }
+                    } preview: {
+                        // Custom preview content
+                        ScrollView {
+                            Text(draft.content)
+                                .padding()
+                                .font(.body)
+                        }
+                        .frame(minWidth: 300, minHeight: 400)
+                    }
+                    .swipeActions(edge: .leading) {
+                        // 3. Swipe Right -> Restore (Move to drafts)
+                        Button {
+                            withAnimation {
+                                draftManager.restoreDraft(draft)
+                            }
+                        } label: {
+                            Label("Restore", systemImage: "arrow.uturn.backward")
+                        }
+                        .tint(.blue)
+                    }
                 }
                 .onDelete { indexSet in
                     indexSet.forEach { index in
-                        let draft = draftManager.archivedDrafts.sorted(by: { $0.modifiedAt > $1.modifiedAt })[index]
-                        draftManager.deleteDraft(draft)
+                        let sortedDrafts = draftManager.archivedDrafts.sorted(by: { $0.modifiedAt > $1.modifiedAt })
+                        if index < sortedDrafts.count {
+                            let draft = sortedDrafts[index]
+                            draftManager.deleteDraft(draft)
+                        }
                     }
                 }
             }
@@ -45,5 +88,11 @@ struct ArchiveListView: View {
                 }
             }
         }
+    }
+
+    private func restoreAndOpen(_ draft: Draft) {
+        draftManager.restoreDraft(draft)
+        draftManager.selectDraft(draft)
+        isPresented = false
     }
 }
