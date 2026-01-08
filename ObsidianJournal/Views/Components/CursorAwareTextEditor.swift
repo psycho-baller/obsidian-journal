@@ -24,19 +24,25 @@ struct CursorAwareTextEditor: UIViewRepresentable {
     func updateUIView(_ uiView: UITextView, context: Context) {
         uiView.isEditable = isEditable
 
-        // Only update text if it actually changed to prevent loops and cursor jumps
+        // 1. Update text if strictly different
         if uiView.text != text {
             uiView.text = text
-            // If text completely replaced (e.g. switching drafts), reset cursor?
-            // Or keep it safe.
-            /*
-            let safeLength = text.count
-            let safeCursor = min(cursorPosition, safeLength)
-             */
         }
 
-        // Handle external cursor updates if necessary (e.g. precise insertion flow)
-        // But usually we trust the View to drive this from the Delegate.
+        // 2. Update cursor position if different
+        // Calculate current usage of cursor
+        if let selectedRange = uiView.selectedTextRange {
+            let currentCursor = uiView.offset(from: uiView.beginningOfDocument, to: selectedRange.start)
+
+            if currentCursor != cursorPosition {
+                // Determine safe index
+                let safeIndex = min(max(0, cursorPosition), uiView.text.count)
+
+                if let newPosition = uiView.position(from: uiView.beginningOfDocument, offset: safeIndex) {
+                    uiView.selectedTextRange = uiView.textRange(from: newPosition, to: newPosition)
+                }
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator {

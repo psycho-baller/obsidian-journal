@@ -78,7 +78,13 @@ class VaultManager: ObservableObject {
                                                 includingResourceValuesForKeys: nil,
                                                 relativeTo: nil)
             #else
-            // iOS: security-scoped bookmark options are unavailable; create a standard bookmark
+            // iOS
+            guard url.startAccessingSecurityScopedResource() else {
+                 self.error = "Failed to access selected folder"
+                 return
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+
             let bookmark = try url.bookmarkData(options: [],
                                                 includingResourceValuesForKeys: nil,
                                                 relativeTo: nil)
@@ -107,14 +113,13 @@ class VaultManager: ObservableObject {
             throw VaultError.notConfigured
         }
 
-        #if os(macOS)
+        // Create access scope for both iOS and macOS
         let accessing = url.startAccessingSecurityScopedResource()
         defer {
             if accessing {
                 url.stopAccessingSecurityScopedResource()
             }
         }
-        #endif
 
         return try block(url)
     }

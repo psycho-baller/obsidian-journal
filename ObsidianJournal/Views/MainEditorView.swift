@@ -80,7 +80,6 @@ struct MainEditorView: View {
                     }
                     .padding(.bottom, 20)
                 }
-                .ignoresSafeArea(.keyboard) // Moves up with keyboard
             }
             .navigationTitle(draftManager.currentDraft?.modifiedAt.formatted(date: .abbreviated, time: .shortened) ?? "Journal")
             .navigationBarTitleDisplayMode(.inline)
@@ -100,6 +99,42 @@ struct MainEditorView: View {
                             Image(systemName: "gearshape")
                         }
                     }
+                }
+
+                // Keyboard Toolbar
+                ToolbarItemGroup(placement: .keyboard) {
+                     Spacer()
+
+                     // Mic Button
+                     Button(action: toggleRecording) {
+                         HStack(spacing: 6) {
+                             Image(systemName: audioRecorder.isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                                 .foregroundColor(audioRecorder.isRecording ? .red : .blue)
+                             Text(audioRecorder.isRecording ? "Stop" : "Dictate")
+                                 .foregroundColor(audioRecorder.isRecording ? .red : .primary)
+                         }
+                         .padding(.horizontal, 12)
+                         .padding(.vertical, 6)
+                         .background(Material.thin)
+                         .clipShape(Capsule())
+                     }
+
+                     Spacer()
+
+                     // Submit Button
+                     if let content = draftManager.currentDraft?.content, !content.isEmpty {
+                         Button(action: submitEntry) {
+                             HStack(spacing: 6) {
+                                 Text("Submit")
+                                 Image(systemName: "arrow.up.circle.fill")
+                             }
+                             .foregroundColor(.green)
+                             .padding(.horizontal, 12)
+                             .padding(.vertical, 6)
+                             .background(Material.thin)
+                             .clipShape(Capsule())
+                         }
+                     }
                 }
             }
             .sheet(isPresented: $showDrafts) {

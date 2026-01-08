@@ -37,7 +37,7 @@ class TranscriberService: ObservableObject, TranscriberServiceProtocol {
         do {
             // WhisperKit will automatically download (if needed) and load the model
             // optimizing for the Neural Engine where possible.
-            whisperPipe = try await WhisperKit(computedPath: modelName)
+            whisperPipe = try await WhisperKit(model: modelName)
             modelLoadingState = .loaded
             Logger.transcription.notice("WhisperKit initialized successfully.")
         } catch {
@@ -72,6 +72,11 @@ class TranscriberService: ObservableObject, TranscriberServiceProtocol {
         do {
             // Transcribe
             let results = try await pipe.transcribe(audioPath: url.path)
+
+            Logger.transcription.debug("Raw segments count: \(results.count)")
+            for (i, segment) in results.enumerated() {
+                Logger.transcription.debug("Segment \(i): \(segment.text)")
+            }
 
             // Combine segments
             let fullText = results.map { $0.text }.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)

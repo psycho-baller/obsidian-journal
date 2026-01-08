@@ -23,14 +23,18 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
             try recordingSession.setActive(true)
 
             let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let audioFilename = docDir.appendingPathComponent("recording.m4a")
+            // Change extension to .wav
+            let audioFilename = docDir.appendingPathComponent("recording.wav")
             Logger.audio.debug("Recording path: \(audioFilename.path)")
 
-            let settings = [
-                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-                AVSampleRateKey: 12000,
+            // Switch to LinearPCM (WAV) which is safer for WhisperKit
+            let settings: [String: Any] = [
+                AVFormatIDKey: Int(kAudioFormatLinearPCM),
+                AVSampleRateKey: 16000, // 16kHz is ideal for Whisper
                 AVNumberOfChannelsKey: 1,
-                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsBigEndianKey: false,
+                AVLinearPCMIsFloatKey: false // Signed Integer PCM
             ]
 
             audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
@@ -42,7 +46,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
             recordingURL = nil
 
             startMonitoring()
-            Logger.audio.notice("Recording started.")
+            Logger.audio.notice("Recording started (WAV 16kHz).")
 
         } catch {
             Logger.audio.error("Failed to start recording: \(error.localizedDescription)")
@@ -55,7 +59,16 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         isRecording = false
         stopMonitoring()
         recordingURL = audioRecorder?.url
-        Logger.audio.notice("Recording stopped. File saved.")
+
+        if let url = recordingURL {
+            do {
+                let resources = try url.resourceValues(forKeys: [.fileSizeKey])
+                let fileSize = resources.fileSize ?? 0
+                Logger.audio.notice("Recording stopped. File saved. Size: \(fileSize) bytes")
+            } catch {
+                Logger.audio.error("Could not determine file size.")
+            }
+        }
     }
 
     private func startMonitoring() {
@@ -73,7 +86,6 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
 
     func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
         if !flag {
-            // Handle error
             Logger.audio.error("Audio Recorder finish flag is false.")
             recordingURL = nil
         } else {

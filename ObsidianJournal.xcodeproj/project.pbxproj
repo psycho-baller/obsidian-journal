@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		003000001 /* ObsidianJournalShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 003100001 /* ObsidianJournalShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		256D37592F0F82CF0037A811 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 256D37582F0F82CF0037A811 /* WhisperKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,6 +68,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				256D37592F0F82CF0037A811 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -173,6 +175,9 @@
 				Base,
 			);
 			mainGroup = 009000001;
+			packageReferences = (
+				256D37572F0F82CF0037A811 /* XCRemoteSwiftPackageReference "whisperkit" */,
+			);
 			productRefGroup = 009000005 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -494,6 +499,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		256D37572F0F82CF0037A811 /* XCRemoteSwiftPackageReference "whisperkit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/whisperkit";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		256D37582F0F82CF0037A811 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 256D37572F0F82CF0037A811 /* XCRemoteSwiftPackageReference "whisperkit" */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 005000001 /* Project object */;
 }
