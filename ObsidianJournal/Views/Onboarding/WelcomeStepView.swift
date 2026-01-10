@@ -19,18 +19,18 @@ struct WelcomeStepView: View {
             VStack(spacing: 35) {
                 Spacer()
 
-                // Logo with glow
+                // Ignite Logo (Flame)
                 ZStack {
                     Circle()
                         .fill(theme.accent.opacity(0.3))
                         .frame(width: 140, height: 140)
                         .blur(radius: 40)
 
-                    Image(systemName: "waveform.circle.fill")
+                    Image(systemName: "flame.fill")
                         .font(.system(size: 80))
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [theme.accent, theme.accent.opacity(0.7)],
+                                colors: [Color(hex: "#FF6B6B"), Color(hex: "#FFD700")], // Flame colors
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -41,8 +41,13 @@ struct WelcomeStepView: View {
 
                 // Headlines
                 VStack(spacing: 12) {
-                    Text("Speak your mind.")
+                    Text("Ignite")
                         .font(.largeTitle)
+                        .fontWeight(.heavy)
+                        .foregroundColor(theme.textPrimary)
+
+                    Text("Speak your mind.")
+                        .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(theme.textPrimary)
 

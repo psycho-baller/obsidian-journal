@@ -4,8 +4,8 @@ import os
 
 class VaultManager: ObservableObject {
     // TODO: explicit suiteName is required for Share Extension to see this.
-    // User must replace "group.com.example.obsidianjournal" with their actual App Group ID.
-    private let defaults = UserDefaults(suiteName: "group.studio.orbitlabs.obsidianjournal")
+    // User must replace "group.com.example.ignite" with their actual App Group ID.
+    private let defaults = UserDefaults(suiteName: "group.studio.orbitlabs.ignite")
 
     @Published var vaultURL: URL?
     @Published var isVaultConfigured: Bool = false

@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 
 // Mock because it is in Shared
 // In real app, make sure AIResponse is available to both
-// But LLMService is in ObsidianJournal/Services, so AIResponse is there.
+// But LLMService is in Ignite/Services, so AIResponse is there.
 // JournalService is in Shared. We need AIResponse in Shared or duplicate structure.
 // NOTE: I will rely on JournalService using the structure defined in Shared if I move it there,
 // OR I will define AIResponse in JournalService.swift to make it available globally.

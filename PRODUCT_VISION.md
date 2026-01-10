@@ -1,4 +1,4 @@
-# The Obsidian Journal Manifesto
+# The Ignite Manifesto
 
 ## The Problem: The Double Friction of Thought
 We live in a stream of consciousness. But when we try to capture that stream, we hit two walls that kill our best ideas.
@@ -13,8 +13,8 @@ This kills the flow. Deep insights don't come from structured typing; they sprou
 
 **The Tragedy**: We are spending 50% of our brainpower on *managing* our notes (where does this go? how do I format this?) instead of *creating* value. We need a system that lets us just **think**, while the machine handles the chores of structure and placement.
 
-## The Solution: Obsidian Journal
-**Obsidian Journal** is the zero-friction bridge. It is not a replacement for Obsidian; it is the perfect satellite. It exists for one singular purpose: **Instant, intelligent capture.**
+## The Solution: Ignite
+**Ignite** is the zero-friction bridge. It is not a replacement for Obsidian; it is the perfect satellite. It exists for one singular purpose: **Instant, intelligent capture.**
 
 We are the "middleman" that respects your privacy, your data sovereignty, and your existing workflow.
 
@@ -32,7 +32,7 @@ But you're also human. You struggle to maintain the discipline of filling out th
 You are tech-savvy enough to care about Markdown and local files, but you're tired of fiddling with mobile UIs that feel like desktop apps shrunk down.
 
 ## What It Actually Does
-Obsidian Journal is a native iOS app that lives on top of your existing Obsidian Vault.
+Ignite is a native iOS app that lives on top of your existing Obsidian Vault.
 
 ### 1. The Magic Button
 One tap. You speak. You're done.
@@ -58,7 +58,7 @@ We are just editing Markdown files. If you delete our app tomorrow, your data is
 We are building the **ultimate input method for the thoughtful life.**
 We believe that technology should dissolve. You shouldn't be "using an app"; you should be **offloading your mind**.
 
-Obsidian Journal is that promise kept. It is the silent, efficient, private secretary that ensures no brilliant thought, no critical task, and no fleeting memory is ever left behind.
+Ignite is that promise kept. It is the silent, efficient, private secretary that ensures no brilliant thought, no critical task, and no fleeting memory is ever left behind.
 
 ---
 *Built with obsession in Swift. Open Source. Private First.*

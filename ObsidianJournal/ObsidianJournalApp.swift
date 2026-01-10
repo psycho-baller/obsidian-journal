@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct ObsidianJournalApp: App {
+struct IgniteApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

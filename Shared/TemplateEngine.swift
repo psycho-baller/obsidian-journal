@@ -149,5 +149,5 @@ public class TemplateEngine {
 // MARK: - Logger Extension
 
 extension Logger {
-    static let template = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ObsidianJournal", category: "Template")
+    static let template = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Ignite", category: "Template")
 }
