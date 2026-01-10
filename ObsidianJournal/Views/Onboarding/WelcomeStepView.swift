@@ -1,12 +1,13 @@
 import SwiftUI
 
-// MARK: - Step 1: Welcome (Clean & Enticing)
+// MARK: - Step 1: Welcome
 
 struct WelcomeStepView: View {
     var theme: AppTheme
 
     @State private var showLogo = false
     @State private var showTitle = false
+    @State private var showSubtitle = false
     @State private var showBadges = false
     @State private var showButton = false
 
@@ -15,7 +16,7 @@ struct WelcomeStepView: View {
             theme.backgroundGradient
                 .ignoresSafeArea()
 
-            VStack(spacing: 40) {
+            VStack(spacing: 35) {
                 Spacer()
 
                 // Logo with glow
@@ -38,8 +39,8 @@ struct WelcomeStepView: View {
                 .opacity(showLogo ? 1 : 0)
                 .scaleEffect(showLogo ? 1 : 0.8)
 
-                // One powerful headline
-                VStack(spacing: 8) {
+                // Headlines
+                VStack(spacing: 12) {
                     Text("Speak your mind.")
                         .font(.largeTitle)
                         .fontWeight(.bold)
@@ -52,11 +53,19 @@ struct WelcomeStepView: View {
                 .multilineTextAlignment(.center)
                 .opacity(showTitle ? 1 : 0)
 
-                // Trust badges - simple row
-                HStack(spacing: 24) {
-                    trustBadge(icon: "lock.shield.fill", label: "Private")
-                    trustBadge(icon: "bolt.fill", label: "Instant")
-                    trustBadge(icon: "brain.head.profile", label: "Smart")
+                // Subtitle explanation
+                Text("Voice-to-vault journaling for Obsidian.\nCapture thoughts instantly, organized automatically.")
+                    .font(.subheadline)
+                    .foregroundColor(theme.textSecondary.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+                    .opacity(showSubtitle ? 1 : 0)
+
+                // Trust badges
+                HStack(spacing: 30) {
+                    trustBadge(icon: "lock.shield.fill", label: "Private", sublabel: "Stays on device")
+                    trustBadge(icon: "mic.fill", label: "Voice-first", sublabel: "Type if you want")
+                    trustBadge(icon: "sparkles", label: "Personalized", sublabel: "Learns your template")
                 }
                 .opacity(showBadges ? 1 : 0)
 
@@ -84,23 +93,31 @@ struct WelcomeStepView: View {
             withAnimation(.easeOut(duration: 0.5).delay(0.2)) {
                 showTitle = true
             }
-            withAnimation(.easeOut(duration: 0.4).delay(0.4)) {
+            withAnimation(.easeOut(duration: 0.4).delay(0.35)) {
+                showSubtitle = true
+            }
+            withAnimation(.easeOut(duration: 0.4).delay(0.5)) {
                 showBadges = true
             }
-            withAnimation(.easeOut(duration: 0.4).delay(0.6)) {
+            withAnimation(.easeOut(duration: 0.4).delay(0.7)) {
                 showButton = true
             }
         }
     }
 
-    private func trustBadge(icon: String, label: String) -> some View {
-        VStack(spacing: 8) {
+    private func trustBadge(icon: String, label: String, sublabel: String) -> some View {
+        VStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 22))
                 .foregroundColor(theme.accent)
 
             Text(label)
                 .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(theme.textPrimary)
+
+            Text(sublabel)
+                .font(.caption2)
                 .foregroundColor(theme.textSecondary)
         }
     }
