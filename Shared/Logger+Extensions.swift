@@ -2,7 +2,7 @@ import Foundation
 import os
 
 extension Logger {
-    private static var subsystem = Bundle.main.bundleIdentifier ?? "studio.orbitlabs.obsidianjournal"
+    private static var subsystem = Bundle.main.bundleIdentifier ?? "studio.orbitlabs.ignite"
 
     static let ui = Logger(subsystem: subsystem, category: "UI")
     static let vault = Logger(subsystem: subsystem, category: "Vault")

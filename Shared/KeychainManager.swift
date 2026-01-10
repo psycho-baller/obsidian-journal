@@ -3,7 +3,7 @@ import Security
 
 class KeychainManager: ObservableObject {
     static let shared = KeychainManager()
-    private let service = "studio.orbitlabs.obsidianjournal"
+    private let service = "studio.orbitlabs.ignite"
     private let account = "openai-api-key"
 
     // Explicitly use the App Group for sharing keychain items if needed,

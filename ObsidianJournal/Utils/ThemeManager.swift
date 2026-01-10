@@ -74,7 +74,7 @@ class ThemeManager: ObservableObject {
         var id: String { rawValue }
     }
 
-    @AppStorage("obsidianJournalThemeMode") var themeMode: ThemeMode = .dark {
+    @AppStorage("IgniteThemeMode") var themeMode: ThemeMode = .dark {
         didSet { objectWillChange.send() }
     }
 

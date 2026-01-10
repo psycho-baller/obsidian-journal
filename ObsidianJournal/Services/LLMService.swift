@@ -25,7 +25,7 @@ class LLMService: ObservableObject {
         // SYSTEM PROMPT - The Heart of the Template Population Engine
         // ═══════════════════════════════════════════════════════════════════════════════
         let systemPrompt = """
-        You are a precision data extraction agent for an Obsidian journaling system.
+        You are a precision data extraction agent for an Ignite journaling system.
 
         ## Your Mission
         Analyze the user's voice transcript and intelligently populate sections of their existing daily note template. Extract ONLY information that is explicitly stated or directly implied in the transcript. Never fabricate, assume, or hallucinate data.
