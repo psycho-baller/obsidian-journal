@@ -5,7 +5,7 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if vaultManager.isVaultConfigured {
+            if vaultManager.isVaultConfigured && !vaultManager.showOnboarding {
                 MainEditorView()
                     .environmentObject(vaultManager)
                     .environmentObject(JournalService(vaultManager: vaultManager))

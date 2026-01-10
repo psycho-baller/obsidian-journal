@@ -90,6 +90,18 @@ struct SettingsView: View {
                         dismiss()
                     }
                 }
+
+                // MARK: - Development
+                Section(header: Text("Development")) {
+                    Button("Redo Onboarding") {
+                        vaultManager.showOnboarding = true
+                        dismiss()
+                    }
+
+                    Text("Re-experience the onboarding flow without losing any data.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .navigationTitle("Settings")
             .toolbar {

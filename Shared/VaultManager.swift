@@ -9,6 +9,7 @@ class VaultManager: ObservableObject {
 
     @Published var vaultURL: URL?
     @Published var isVaultConfigured: Bool = false
+    @Published var showOnboarding: Bool = false
     @Published var error: String?
     @Published var inferredTemplate: InferredTemplate?
 

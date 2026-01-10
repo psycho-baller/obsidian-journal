@@ -36,7 +36,7 @@ Obsidian Journal is a native iOS app that lives on top of your existing Obsidian
 
 ### 1. The Magic Button
 One tap. You speak. You're done.
-We use state-of-the-art on-device transcription (WhisperKit) to turn your voice into perfect text. No sending audio to a server unless you explicitly choose to.
+We use state-of-the-art on-device transcription (WhisperKit) to turn your voice into perfect text. 4x faster than cloud transcription and just as accurate.
 
 ### 2. Intelligent Template Hydration
 This is our "Killer Feature."
@@ -52,7 +52,7 @@ We patch your file surgically. We don't overwrite; we *populate*.
 Not ready to commit to the vault? Keep it as a draft. Review it, edit it, then swipe to send. It's a staging area for your mind.
 
 ### 4. Zero Lock-In
-We are just editing Markdown files. If you delete our app tomorrow, your data is still just text files in your iCloud Drive. We are a good citizen of the ecosystem.
+We are just editing Markdown files. If you delete our app tomorrow, your data is still just text files in your vault. We are a good citizen of the ecosystem.
 
 ## The Vision
 We are building the **ultimate input method for the thoughtful life.**
