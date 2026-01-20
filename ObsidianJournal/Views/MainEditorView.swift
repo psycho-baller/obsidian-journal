@@ -80,6 +80,58 @@ struct MainEditorView: View {
                     }
                     .padding(.bottom, 20)
                 }
+
+                // Model Loading Status Banner
+                if case .loading = transcriberService.modelLoadingState {
+                    VStack {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                                .tint(.white)
+                            Text("Loading transcription model...")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.blue.opacity(0.9))
+                                .shadow(color: .black.opacity(0.2), radius: 5, y: 2)
+                        )
+                        .padding(.top, 8)
+
+                        Spacer()
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.3), value: transcriberService.modelLoadingState)
+                }
+
+                // Transcribing Status Banner
+                if transcriberService.isTranscribing {
+                    VStack {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                                .tint(.white)
+                            Text("Transcribing...")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.green.opacity(0.9))
+                                .shadow(color: .black.opacity(0.2), radius: 5, y: 2)
+                        )
+                        .padding(.top, 8)
+
+                        Spacer()
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.3), value: transcriberService.isTranscribing)
+                }
             }
             .navigationTitle(draftManager.currentDraft?.modifiedAt.formatted(date: .abbreviated, time: .shortened) ?? "Journal")
             .navigationBarTitleDisplayMode(.inline)
@@ -176,7 +228,16 @@ struct MainEditorView: View {
     private func processTranscription(url: URL) {
         Task {
             do {
-                let text = try await transcriberService.transcribe(audioURL: url)
+                var text = try await transcriberService.transcribe(audioURL: url)
+
+                // remove [BLANK_AUDIO] from text
+                text = text.replacingOccurrences(of: "[BLANK_AUDIO]", with: "")
+
+                // Skip blank transcriptions - only insert real text
+                guard !text.isEmpty && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    print("Skipping empty transcription")
+                    return
+                }
 
                 // Insert text at cursor position
                 await MainActor.run {

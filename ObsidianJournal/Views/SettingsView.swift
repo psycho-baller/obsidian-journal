@@ -3,6 +3,8 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var vaultManager: VaultManager
     @StateObject private var llmService = LLMService()
+    @ObservedObject private var transcriptionSettings = TranscriptionSettings.shared
+    @StateObject private var transcriberService = TranscriberService()
     @State private var apiKey: String = ""
     @State private var isReInferring = false
     @Environment(\.dismiss) var dismiss
@@ -20,6 +22,95 @@ struct SettingsView: View {
                     Text("Your API key is stored securely on device.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                // MARK: - Transcription Model
+                Section(header: Text("Transcription Model")) {
+                    Picker("Model", selection: $transcriptionSettings.selectedModel) {
+                        ForEach(TranscriptionModel.allCases) { model in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack {
+                                        Text(model.displayName)
+                                        if model.isCloud {
+                                            Image(systemName: "cloud.fill")
+                                                .foregroundStyle(.blue)
+                                                .font(.caption)
+                                        }
+                                    }
+                                    Text("\(model.sizeDescription) • \(model.accuracyDescription)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                            }
+                            .tag(model)
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+
+                    // Model status
+                    if transcriptionSettings.selectedModel.isCloud {
+                        if apiKey.isEmpty {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Cloud transcription requires an API key")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                Text("Ready for cloud transcription")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    } else {
+                        // Local model status
+                        switch transcriberService.modelLoadingState {
+                        case .notLoaded:
+                            HStack {
+                                Image(systemName: "arrow.down.circle")
+                                    .foregroundStyle(.blue)
+                                Text("Model will download on first use")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        case .loading, .downloading:
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Loading model...")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        case .loaded:
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                Text("Model ready")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        case .error(let message):
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.red)
+                                Text(message)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+
+                        // Download progress if downloading
+                        if transcriberService.isDownloading {
+                            ProgressView(value: transcriberService.downloadProgress)
+                                .progressViewStyle(.linear)
+                        }
+                    }
                 }
 
                 // MARK: - Template Status
