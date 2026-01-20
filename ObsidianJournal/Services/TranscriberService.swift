@@ -168,13 +168,30 @@ class TranscriberService: ObservableObject, TranscriberServiceProtocol {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
-        // Build multipart body
+        // Build multipart body with optimized parameters
         var body = Data()
 
-        // Add model field
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
-        body.append("whisper-1\r\n".data(using: .utf8)!)
+        // Helper function to append form field
+        func appendField(_ name: String, _ value: String) {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(value)\r\n".data(using: .utf8)!)
+        }
+
+        // Model - using whisper-1 (or gpt-4o-transcribe for even better accuracy if available)
+        appendField("model", "whisper-1")
+
+        // Language - explicitly set to English for better accuracy and faster processing
+        appendField("language", "en")
+
+        // Temperature - 0 for most deterministic/accurate output
+        appendField("temperature", "0")
+
+        // Prompt - guide the model for journal-style transcription
+        appendField("prompt", "This is a personal journal entry. Transcribe naturally with proper punctuation and capitalization. Include filler words if spoken.")
+
+        // Response format - simple text
+        appendField("response_format", "text")
 
         // Add audio file
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
@@ -202,15 +219,15 @@ class TranscriberService: ObservableObject, TranscriberServiceProtocol {
             throw TranscriberError.networkError("API error: \(httpResponse.statusCode)")
         }
 
-        // Parse response
-        struct WhisperResponse: Decodable {
-            let text: String
+        // Parse response - response_format=text returns plain text
+        guard let transcribedText = String(data: data, encoding: .utf8) else {
+            throw TranscriberError.networkError("Invalid response encoding")
         }
 
-        let decoded = try JSONDecoder().decode(WhisperResponse.self, from: data)
-        Logger.transcription.notice("Cloud transcription completed. Length: \(decoded.text.count)")
+        let trimmedText = transcribedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        Logger.transcription.notice("Cloud transcription completed. Length: \(trimmedText.count)")
 
-        return decoded.text
+        return trimmedText
     }
 }
 
