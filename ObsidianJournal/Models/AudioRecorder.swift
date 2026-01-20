@@ -19,8 +19,13 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         let recordingSession = AVAudioSession.sharedInstance()
 
         do {
-            try recordingSession.setCategory(.playAndRecord, mode: .default)
-            try recordingSession.setActive(true)
+            // Configure for background audio recording
+            try recordingSession.setCategory(
+                .playAndRecord,
+                mode: .default,
+                options: [.allowBluetooth, .defaultToSpeaker]
+            )
+            try recordingSession.setActive(true, options: .notifyOthersOnDeactivation)
 
             let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             // Change extension to .wav
