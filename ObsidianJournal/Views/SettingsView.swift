@@ -34,7 +34,7 @@ struct SettingsView: View {
                                         Text(model.displayName)
                                         if model.isCloud {
                                             Image(systemName: "cloud.fill")
-                                                .foregroundStyle(.blue)
+                                                .foregroundStyle(ThemeManager.obsidianPurple)
                                                 .font(.caption)
                                         }
                                     }
@@ -74,7 +74,7 @@ struct SettingsView: View {
                         case .notLoaded:
                             HStack {
                                 Image(systemName: "arrow.down.circle")
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(ThemeManager.obsidianPurple)
                                 Text("Model will download on first use")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)

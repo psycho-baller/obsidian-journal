@@ -96,7 +96,7 @@ private struct ArchiveRowView: View {
             Button(action: onSwipeRestore) {
                 Label("Restore", systemImage: "arrow.uturn.backward")
             }
-            .tint(.blue)
+            .tint(ThemeManager.obsidianPurple)
         }
     }
 }

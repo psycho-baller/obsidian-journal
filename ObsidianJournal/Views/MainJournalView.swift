@@ -66,7 +66,7 @@ struct MainJournalView: View {
                     }) {
                         Image(systemName: "mic.circle.fill")
                             .font(.system(size: 120))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(ThemeManager.obsidianPurple)
                             .shadow(radius: 10)
                     }
 

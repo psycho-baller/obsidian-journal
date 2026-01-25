@@ -60,8 +60,8 @@ struct MainEditorView: View {
                             .padding(.horizontal, 24)
                             .background(
                                 Capsule()
-                                    .fill(audioRecorder.isRecording ? Color.red : Color.blue)
-                                    .shadow(color: (audioRecorder.isRecording ? Color.red : Color.blue).opacity(0.3), radius: 10, x: 0, y: 5)
+                                    .fill(audioRecorder.isRecording ? Color.red : ThemeManager.obsidianPurple)
+                                    .shadow(color: (audioRecorder.isRecording ? Color.red : ThemeManager.obsidianPurple).opacity(0.3), radius: 10, x: 0, y: 5)
                             )
                         }
 
@@ -96,7 +96,7 @@ struct MainEditorView: View {
                         .padding(.vertical, 10)
                         .background(
                             Capsule()
-                                .fill(Color.blue.opacity(0.9))
+                                .fill(ThemeManager.obsidianPurple.opacity(0.9))
                                 .shadow(color: .black.opacity(0.2), radius: 5, y: 2)
                         )
                         .padding(.top, 8)
@@ -183,7 +183,7 @@ struct MainEditorView: View {
                      Button(action: toggleRecording) {
                          HStack(spacing: 6) {
                              Image(systemName: audioRecorder.isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                                 .foregroundColor(audioRecorder.isRecording ? .red : .blue)
+                                 .foregroundColor(audioRecorder.isRecording ? .red : ThemeManager.obsidianPurple)
                              Text(audioRecorder.isRecording ? "Stop" : "Dictate")
                                  .foregroundColor(audioRecorder.isRecording ? .red : .primary)
                          }
