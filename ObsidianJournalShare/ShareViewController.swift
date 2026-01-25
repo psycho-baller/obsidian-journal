@@ -24,78 +24,79 @@ class ShareViewController: UIViewController {
     }
 
     private func handleSharedContent() {
-        // 1. Grab the item (e.g., plain text)
         guard let extensionItem = extensionContext?.inputItems.first as? NSExtensionItem,
               let attachment = extensionItem.attachments?.first else {
-            // No attachments found, just complete
             self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
             return
         }
 
-        // Check for plain text (using the legacy kUTTypePlainText for compatibility)
+        // Priority 1: Plain text (direct copy/paste sharing)
         if attachment.hasItemConformingToTypeIdentifier(kUTTypePlainText as String) {
             attachment.loadItem(forTypeIdentifier: kUTTypePlainText as String, options: nil) { [weak self] (data, error) in
-                guard let self = self else { return }
-
-                DispatchQueue.main.async {
-                    if let text = data as? String {
-                        // 2. Save to App Group UserDefaults (Backup)
-                        if let defaults = UserDefaults(suiteName: "group.studio.orbitlabs.ignite") {
-                            defaults.set(text, forKey: "shared_content")
-                            defaults.synchronize()
-                        }
-
-                        // 3. Open main app with content (Primary)
-                        var urlString = "ignite://open-shared"
-                        if let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-                            urlString += "?content=\(encoded)"
-                        }
-
-                        if let url = URL(string: urlString) {
-                            self.openMainApp(url: url)
-                        }
-                    } else {
-                        // Failed to extract text
-                        self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
-                    }
-                }
+                self?.handleLoadedItem(data: data, error: error)
             }
-        } else if attachment.hasItemConformingToTypeIdentifier(UTType.text.identifier) {
-            // Fallback: Try UTType.text (covers more text types)
+        }
+        // Priority 2: File URL (sharing files from Files app, etc.)
+        else if attachment.hasItemConformingToTypeIdentifier(kUTTypeFileURL as String) {
+            attachment.loadItem(forTypeIdentifier: kUTTypeFileURL as String, options: nil) { [weak self] (data, error) in
+                self?.handleLoadedItem(data: data, error: error)
+            }
+        }
+        // Priority 3: Generic text type (covers various text formats)
+        else if attachment.hasItemConformingToTypeIdentifier(UTType.text.identifier) {
             attachment.loadItem(forTypeIdentifier: UTType.text.identifier, options: nil) { [weak self] (data, error) in
-                guard let self = self else { return }
-
-                DispatchQueue.main.async {
-                    var text: String? = nil
-
-                    if let string = data as? String {
-                        text = string
-                    } else if let url = data as? URL {
-                        text = try? String(contentsOf: url)
-                    }
-
-                    if let text = text {
-                        if let defaults = UserDefaults(suiteName: "group.studio.orbitlabs.ignite") {
-                            defaults.set(text, forKey: "shared_content")
-                            defaults.synchronize()
-                        }
-
-                        var urlString = "ignite://open-shared"
-                        if let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-                            urlString += "?content=\(encoded)"
-                        }
-
-                        if let url = URL(string: urlString) {
-                            self.openMainApp(url: url)
-                        }
-                    } else {
-                        self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
-                    }
-                }
+                self?.handleLoadedItem(data: data, error: error)
             }
-        } else {
-            // Unknown type, just complete
+        }
+        // Priority 4: URL type (for web links shared as text)
+        else if attachment.hasItemConformingToTypeIdentifier(kUTTypeURL as String) {
+            attachment.loadItem(forTypeIdentifier: kUTTypeURL as String, options: nil) { [weak self] (data, error) in
+                self?.handleLoadedItem(data: data, error: error)
+            }
+        }
+        else {
             self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+        }
+    }
+
+    private func handleLoadedItem(data: NSSecureCoding?, error: Error?) {
+        DispatchQueue.main.async {
+            var text: String? = nil
+
+            if let string = data as? String {
+                text = string
+            } else if let url = data as? URL {
+                // Check if it's a file URL we can read
+                if url.isFileURL {
+                    text = try? String(contentsOf: url, encoding: .utf8)
+                } else {
+                    // It's a web URL, use its string representation
+                    text = url.absoluteString
+                }
+            } else if let urlData = data as? Data, let urlString = String(data: urlData, encoding: .utf8) {
+                text = urlString
+            }
+
+            guard let finalText = text, !finalText.isEmpty else {
+                self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+                return
+            }
+
+            // Save to App Group UserDefaults (Backup for large content)
+            if let defaults = UserDefaults(suiteName: "group.studio.orbitlabs.ignite") {
+                defaults.set(finalText, forKey: "shared_content")
+                defaults.synchronize()
+            }
+
+            // Open main app with content (Primary)
+            var urlString = "ignite://open-shared"
+            if let encoded = finalText.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                urlString += "?content=\(encoded)"
+            }
+
+            if let url = URL(string: urlString) {
+                self.openMainApp(url: url)
+            }
         }
     }
 
@@ -111,7 +112,7 @@ class ShareViewController: UIViewController {
             responder = responder?.next
         }
 
-        // Method 2: Fallback for newer iOS versions - use extensionContext.open directly
+        // Method 2: Fallback for newer iOS versions
         self.extensionContext?.open(url, completionHandler: { [weak self] success in
             self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
         })
