@@ -7,7 +7,7 @@ enum TranscriptionModel: String, CaseIterable, Codable, Identifiable {
     case tiny = "openai_whisper-tiny.en"
     case base = "openai_whisper-base.en"
     case small = "openai_whisper-small.en"
-    case medium = "openai_whisper-medium.en"
+    case medium = "openai_whisper-medium"
     case largeV3 = "distil-whisper_distil-large-v3_turbo"
 
     // Cloud option
