@@ -90,6 +90,21 @@ class DraftManager: ObservableObject {
         }
     }
 
+    func updateDraftDate(_ date: Date) {
+        guard var draft = currentDraft else { return }
+        draft.createdAt = date
+        draft.modifiedAt = Date()
+
+        objectWillChange.send()
+        currentDraft = draft
+
+        if let index = drafts.firstIndex(where: { $0.id == draft.id }) {
+            drafts[index] = draft
+        }
+
+        saveDrafts()
+    }
+
     func archiveDraft(_ draft: Draft) {
         guard let index = drafts.firstIndex(where: { $0.id == draft.id }) else { return }
 

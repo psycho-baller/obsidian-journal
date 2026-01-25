@@ -2,7 +2,7 @@ import SwiftUI
 import AVFoundation
 
 struct MainEditorView: View {
-    @StateObject private var draftManager = DraftManager()
+    @EnvironmentObject var draftManager: DraftManager
     @StateObject private var audioRecorder = AudioRecorder()
     @StateObject private var transcriberService = TranscriberService()
     @EnvironmentObject var journalService: JournalService
@@ -133,9 +133,31 @@ struct MainEditorView: View {
                     .animation(.easeInOut(duration: 0.3), value: transcriberService.isTranscribing)
                 }
             }
-            .navigationTitle(draftManager.currentDraft?.modifiedAt.formatted(date: .abbreviated, time: .shortened) ?? "Journal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Menu {
+                        Button(action: { setDate(offset: 0) }) {
+                            Label(getDateLabel(for: 0), systemImage: "calendar")
+                        }
+                        Button(action: { setDate(offset: -1) }) {
+                            Label(getDateLabel(for: -1), systemImage: "clock.arrow.circlepath")
+                        }
+                        Button(action: { setDate(offset: 1) }) {
+                            Label(getDateLabel(for: 1), systemImage: "arrow.turn.up.right")
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(headerTitle)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { showDrafts.toggle() }) {
                         Image(systemName: "sidebar.left")
@@ -299,6 +321,61 @@ struct MainEditorView: View {
                 print("Submission failed: \(error)")
                 // TODO: Show error alert
             }
+        }
+    }
+    private func setDate(offset: Int) {
+        let calendar = Calendar.current
+        let today = Date()
+
+        // Calculate target date
+        let targetDate: Date
+        if offset == 0 {
+            targetDate = today
+        } else {
+            targetDate = calendar.date(byAdding: .day, value: offset, to: today) ?? today
+        }
+
+        draftManager.updateDraftDate(targetDate)
+    }
+
+    private func getDateLabel(for offset: Int) -> String {
+        let calendar = Calendar.current
+        let today = Date()
+        let targetDate: Date
+
+        if offset == 0 {
+            targetDate = today
+        } else {
+            targetDate = calendar.date(byAdding: .day, value: offset, to: today) ?? today
+        }
+
+        let prefix: String
+        if offset == 0 {
+            prefix = "Today"
+        } else if offset == -1 {
+            prefix = "Yesterday"
+        } else if offset == 1 {
+            prefix = "Tomorrow"
+        } else {
+            return targetDate.formatted(date: .abbreviated, time: .omitted)
+        }
+
+        return "\(prefix), \(targetDate.ordinalDateString)"
+    }
+
+    private var headerTitle: String {
+        guard let date = draftManager.currentDraft?.createdAt else { return "Journal" }
+        let calendar = Calendar.current
+
+        // Check relative dates
+        if calendar.isDateInToday(date) {
+            return "Today, \(date.ordinalDateString)"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday, \(date.ordinalDateString)"
+        } else if calendar.isDateInTomorrow(date) {
+            return "Tomorrow, \(date.ordinalDateString)"
+        } else {
+            return date.formatted(date: .abbreviated, time: .omitted)
         }
     }
 }
