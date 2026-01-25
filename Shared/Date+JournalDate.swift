@@ -14,4 +14,12 @@ extension Date {
         }
         return self
     }
+    var ordinalDateString: String {
+        let calendar = Calendar.current
+        let day = calendar.component(.day, from: self)
+        let numberFormatter = NumberFormatter()
+        numberFormatter.numberStyle = .ordinal
+        let dayString = numberFormatter.string(from: NSNumber(value: day)) ?? "\(day)"
+        return dayString
+    }
 }

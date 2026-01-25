@@ -17,5 +17,16 @@
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Ignite needs microphone access to record voice journal entries.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ignite</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
