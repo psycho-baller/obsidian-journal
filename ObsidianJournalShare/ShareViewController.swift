@@ -39,14 +39,19 @@ class ShareViewController: UIViewController {
 
                 DispatchQueue.main.async {
                     if let text = data as? String {
-                        // 2. Save to App Group UserDefaults (more reliable than URL encoding for large text)
+                        // 2. Save to App Group UserDefaults (Backup)
                         if let defaults = UserDefaults(suiteName: "group.studio.orbitlabs.ignite") {
                             defaults.set(text, forKey: "shared_content")
                             defaults.synchronize()
                         }
 
-                        // 3. Open main app
-                        if let url = URL(string: "ignite://open-shared") {
+                        // 3. Open main app with content (Primary)
+                        var urlString = "ignite://open-shared"
+                        if let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                            urlString += "?content=\(encoded)"
+                        }
+
+                        if let url = URL(string: urlString) {
                             self.openMainApp(url: url)
                         }
                     } else {
@@ -75,7 +80,12 @@ class ShareViewController: UIViewController {
                             defaults.synchronize()
                         }
 
-                        if let url = URL(string: "ignite://open-shared") {
+                        var urlString = "ignite://open-shared"
+                        if let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                            urlString += "?content=\(encoded)"
+                        }
+
+                        if let url = URL(string: urlString) {
                             self.openMainApp(url: url)
                         }
                     } else {
